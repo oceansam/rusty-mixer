@@ -4,7 +4,7 @@
   "description": "Neon Hello World",
   "main": "index.node",
   "scripts": {
-    "dev": "node require('.').get_audio_devices()",
+    "dev": "npm run build && node test.js",
     "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
     "install": "npm run build",
     "test": "cargo test"

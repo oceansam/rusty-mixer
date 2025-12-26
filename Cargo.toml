@@ -12,3 +12,8 @@ crate-type = ["cdylib"]
 [dependencies]
 cpal = "0.17.0"
 neon = "1"
+windows = { version = "0.58", features = [
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_System_Com",
+] }
