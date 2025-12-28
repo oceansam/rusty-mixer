@@ -16,4 +16,6 @@ windows = { version = "0.58", features = [
     "Win32_Media_Audio",
     "Win32_Media_Audio_Endpoints",
     "Win32_System_Com",
+    "Win32_UI_Shell_PropertiesSystem",      # For IPropertyStore & STGM_READ
+    "Win32_Devices_FunctionDiscovery",       # For PKEY_Device_FriendlyName
 ] }

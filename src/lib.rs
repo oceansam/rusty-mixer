@@ -1,59 +1,66 @@
+mod utils;
+
 use neon::prelude::*;
-use cpal::traits::{DeviceTrait, HostTrait};
 use windows::{
     core::HSTRING,
     Win32::{
-        Media::Audio::*,
-        System::Com::*,
-        Media::Audio::Endpoints::*
-    }
+        Devices::FunctionDiscovery::PKEY_Device_FriendlyName, Media::Audio::Endpoints::*,
+        Media::Audio::*, System::Com::*,
+    },
 };
 
+use crate::utils::collect_devices;
+
 fn get_audio_devices(mut cx: FunctionContext) -> JsResult<JsArray> {
-    println!("Supported hosts:\n  {:?}", cpal::ALL_HOSTS);
-    let available_hosts = cpal::available_hosts();
-    println!("Available hosts:\n  {available_hosts:?}");
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let enumerator: IMMDeviceEnumerator =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).unwrap();
 
-    let host = cpal::default_host();
-    let devices = host.devices().unwrap();
-    
-    // Create the JS array to return
-    let js_array = cx.empty_array();
+        let input_collection = enumerator
+            .EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE)
+            .unwrap();
+        let output_collection = enumerator
+            .EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)
+            .unwrap();
 
-    for (device_index, device) in devices.enumerate() {
-        let id = device
-            .id()
-            .map_or_else(
-                |_| "Unknown ID".to_string(),
-                |id| id.to_string(),
-            );
-        let name = device
-            .description()
-            .map_or_else(
-                |_| "Unknown Name".to_string(),
-                |desc| desc.to_string()
-            );
+        // Convert to native Rust Vec and chain them together
+        let all_devices: Vec<(IMMDevice, bool)> = collect_devices(&input_collection, true)
+            .into_iter()
+            .chain(collect_devices(&output_collection, false))
+            .collect();
+        // Create the JS array to return
+        let js_array = cx.empty_array();
 
-        // Create a JS object for each device
-        let js_object = cx.empty_object();
-        let formatted_id = id.strip_prefix("wasapi:").unwrap();
+        for (idx, (device, is_input)) in all_devices.iter().enumerate() {
+            let id = device.GetId().unwrap().to_string().unwrap();
+            let props = device.OpenPropertyStore(STGM_READ).unwrap();
+            let name = props
+                .GetValue(&PKEY_Device_FriendlyName)
+                .unwrap()
+                .to_string();
+            // build js obj
+            let js_object = cx.empty_object();
+            let js_id = cx.string(&id);
+            let js_name = cx.string(&name);
+            let js_is_input = cx.boolean(*is_input);
 
-        let js_id = cx.string(&formatted_id.to_string());
-        let js_name = cx.string(&name);
-        
-        js_object.set(&mut cx, "id", js_id)?;
-        js_object.set(&mut cx, "name", js_name)?;
-        
-        js_array.set(&mut cx, device_index as u32, js_object)?;
+            // update js obj
+            js_object.set(&mut cx, "id", js_id)?;
+            js_object.set(&mut cx, "name", js_name)?;
+            js_object.set(&mut cx, "isInput", js_is_input)?;
+            js_array.set(&mut cx, idx as u32, js_object)?;
+        }
+
+        Ok(js_array)
     }
-    
-    Ok(js_array)
 }
 
 pub fn set_global_volume(volume: f32) -> windows::core::Result<()> {
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-        let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+        let enumerator: IMMDeviceEnumerator =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
         let device = enumerator.GetDefaultAudioEndpoint(eRender, eConsole)?;
         let endpoint_volume: IAudioEndpointVolume = device.Activate(CLSCTX_ALL, None)?;
         endpoint_volume.SetMasterVolumeLevelScalar(volume, std::ptr::null())?;
@@ -64,8 +71,9 @@ pub fn set_global_volume(volume: f32) -> windows::core::Result<()> {
 pub fn set_device_volume(device_id: &str, volume: f32) -> windows::core::Result<()> {
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-        let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
 
+        let enumerator: IMMDeviceEnumerator =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
         let device_id = HSTRING::from(device_id);
         let device_to_update = enumerator.GetDevice(&device_id)?;
 
@@ -77,15 +85,13 @@ pub fn set_device_volume(device_id: &str, volume: f32) -> windows::core::Result<
 }
 
 pub fn set_device_as_default(_device_id: &str) -> windows::core::Result<()> {
-    unsafe {
-        // TODO @sam
-        Ok(())
-    }
+    // TODO @sam
+    Ok(())
 }
 // ================ JS SHIT ================ \\
 fn js_set_global_volume(mut cx: FunctionContext) -> JsResult<JsUndefined> {
     let volume = cx.argument::<JsNumber>(0)?.value(&mut cx) as f32;
-    
+
     match set_global_volume(volume) {
         Ok(_) => Ok(cx.undefined()),
         Err(e) => cx.throw_error(format!("Failed to set volume: {}", e)),
