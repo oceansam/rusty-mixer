@@ -1,0 +1,20 @@
+{
+  "name": "@rusty-mixer/win32-x64",
+  "version": "0.1.0",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "index.node",
+  "files": [
+    "index.node"
+  ],
+  "description": "Windows x64 binary for rusty-mixer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oceansam/rusty-mixer.git"
+  }
+}

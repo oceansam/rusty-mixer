@@ -1,5 +1,5 @@
 [package]
-name = "hello-world"
+name = "rusty-mixer"
 version = "0.1.0"
 description = "Neon Hello World"
 license = "MIT"
@@ -10,7 +10,6 @@ exclude = ["index.node"]
 crate-type = ["cdylib"]
 
 [dependencies]
-cpal = "0.17.0"
 neon = "1"
 windows = { version = "0.58", features = [
     "Win32_Media_Audio",

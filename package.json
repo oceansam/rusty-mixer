@@ -1,28 +1,23 @@
 {
-  "name": "hello-world",
+  "name": "rusty-mixer",
   "version": "0.1.0",
-  "description": "Neon Hello World",
-  "main": "index.node",
-  "scripts": {
-    "dev": "npm run build && node test.js",
-    "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
-    "install": "npm run build",
-    "test": "cargo test"
-  },
+  "description": "Windows audio device management via Rust",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "index.node"
+  ],
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
   "license": "MIT",
-  "devDependencies": {
-    "cargo-cp-artifact": "^0.1"
-  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/neon-bindings/examples.git"
-  },
-  "keywords": [
-    "Neon",
-    "Examples"
-  ],
-  "bugs": {
-    "url": "https://github.com/neon-bindings/examples/issues"
-  },
-  "homepage": "https://github.com/neon-bindings/examples#readme"
+    "url": "git+https://github.com/oceansam/rusty-mixer.git"
+  }
 }
